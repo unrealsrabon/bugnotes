@@ -85,6 +85,26 @@ Dropped your site cache? Switched to a clean, hardened burner laptop? Simply dra
 
 ---
 
+## 🗄️ IndexedDB Storage Policy & Data Safety Guide (Must Read)
+
+Since BugNotes runs entirely as a **local-first browser application** without an external cloud database, your notes are bound to your browser's private sandbox storage (**IndexedDB**). To prevent accidental data loss, here is everything you need to know about how your browser treats your notebook:
+
+### 🟢 What is Safe?
+- **Clearing Browsing History:** Safely clear your regular browsing history, downloads, or search logs. Your IndexedDB database **will not be touched**, and your notes will remain perfectly intact.
+- **System Restarts:** Shutting down your machine or quitting your browser will never delete your notes.
+
+### 🔴 When can Data be Wiped Out? (Precautions)
+Your local database can be completely cleared under these specific browser and system conditions:
+1. **Clearing "Cookies and Site Data":** If you manually clear your browser data and explicitly check the box for **"Cookies and other site data"** or click **"Clear Site Data"** in Developer Tools, your database will be purged.
+2. **Incognito / Private Browsing:** If you open BugNotes inside an Incognito window, it spins up a temporary temporary database in your RAM. **Closing the Private Window destroys all notes instantly.**
+3. **Critical Hard Drive Congestion:** If your computer's main drive (`C: Drive` or root volume) drops to nearly 0% free space, modern browsers (Chrome/Brave) will automatically initiate *Automated Eviction* to free up system space, which may clear offline databases.
+4. **The Safari 7-Day Inactivity Rule:** If you access this tool via **Apple Safari** (macOS or iOS) and do not interact with the application for **7 consecutive days**, Apple's tracking prevention policy will automatically wipe out the IndexedDB container. *(This restriction does not apply to Chrome, Brave, or Firefox).*
+
+---
+- **Pro-Tip For Hunters:** Make it a strict habit to click **Export Backup (.json)** at the end of every active hacking session. Keep that lightweight file on your local machine or an encrypted drive. If your browser cache gets wiped, dragging that file back into the **Import Backup** module fully reconstructs your entire note structure and content tree in less than a second!
+
+---
+
 ## 5. Premium UI Canvas & Code-Editor Features
 
 The visual design is meticulously structured around prolonged, high-cognitive work sessions where eye strain and interface friction must be minimized.
