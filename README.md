@@ -61,16 +61,7 @@ Because there is no centralized database server or shared network state, malicio
 
 ---
 
-## 3. Asynchronous Refresh-Proof Persistence
-
-Older local-first architectures often relied on brittle API states or slow sequential parsing, causing UI race conditions. BugNotes completely re-engineers this pipeline.
-
-* **Instant Auto-Loading:** When the page is refreshed, hard-reloaded, or reopened in a new browser tab, the application asynchronously queries the local IndexedDB instance. It fully reconstructs and renders the entire note index hierarchy in the sidebar within milliseconds—with zero duplication or UI lag.
-* **State Machine Bug Eradication:** Shifting away from the legacy GitHub API state machine over to native IndexedDB completely eliminates exhausting race conditions, file duplicate clutter, and critical `"sha" wasn't supplied` commit hash errors during real-time note updates or header renames.
-
----
-
-## 4. Anti-Data-Loss Shield (Client-Side Backups)
+## 3. Anti-Data-Loss Shield (Client-Side Backups)
 
 Security testing environments often demand aggressive hygiene—including frequent browser history wipes, cookie purges, and automated site cache clearances. Under standard conditions, this risks destroying local browser databases. BugNotes builds a permanent physical defense against this vector.
 
@@ -105,7 +96,7 @@ Your local database can be completely cleared under these specific browser and s
 
 ---
 
-## 5. Premium UI Canvas & Code-Editor Features
+## 4. Premium UI Canvas & Code-Editor Features
 
 The visual design is meticulously structured around prolonged, high-cognitive work sessions where eye strain and interface friction must be minimized.
 
@@ -145,7 +136,7 @@ Features real-time state listeners where updating an active heading or title ins
 
 ---
 
-## 6. Getting Started
+## 5. Getting Started
 
 Since BugNotes requires **absolute zero-setup out of the box**, you can spin up your workspace in seconds:
 
