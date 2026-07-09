@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fieldnotes — recon &amp; findings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<style>
+/* =========================================================
+   Design tokens
+   ========================================================= */
+:root{
+  --bg: #f4f3ee;
+  --surface: #ebe9df;
+  --surface-2: #e2dfd2;
+  --border: #d9d5c6;
+  --border-strong: #c7c2ae;
+  --ink: #2a2a24;
+  --ink-muted: #6f6c5e;
+  --ink-faint: #9b9787;
+  --accent: #3f6b52;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2ebe3;
+  --accent-soft-border: #c3d6c8;
+  --danger: #a8493c;
+  --danger-soft: #f3e3e0;
+  --warn: #a97c2f;
+  --warn-soft: #f2ead9;
+  --radius-sm: 4px;
+  --radius: 7px;
+  --radius-lg: 10px;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sidebar-w: 280px;
+}
+
+*{ box-sizing: border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  overflow:hidden;
+  -webkit-font-smoothing: antialiased;
+}
+button{ font-family: inherit; cursor:pointer; }
+input, textarea{ font-family: inherit; }
+::selection{ background: var(--accent-soft-border); }
+
+svg{ display:block; flex-shrink:0; }
+
+/* =========================================================
+   App shell
+   ========================================================= */
+#app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ---------- Header ---------- */
+header{
+  height:52px;
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:0 16px;
+  background: var(--bg);
+  border-bottom: 1px solid transparent;
+  z-index: 20;
+}
+.icon-btn{
+  width:34px; height:34px;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+.icon-btn:hover{
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--border);
+}
+.icon-btn svg{ width:18px; height:18px; }
+
+.header-path{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-faint);
+  overflow:hidden;
+  white-space:nowrap;
+  flex:1;
+  min-width:0;
+}
+.header-path .sep{ color: var(--border-strong); }
+.header-path .note-name{
+  color: var(--ink);
+  font-weight:500;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.dirty-dot{
+  width:6px; height:6px; border-radius:50%;
+  background: var(--warn);
+  flex-shrink:0;
+  display:none;
+}
+.dirty-dot.show{ display:inline-block; }
+
+.header-actions{ display:flex; align-items:center; gap:10px; }
+
+.sync-pill{
+  display:flex; align-items:center; gap:6px;
+  font-size:12px;
+  color: var(--ink-muted);
+  padding:5px 10px;
+  border-radius: 999px;
+  border:1px solid var(--border);
+  background: var(--surface);
+  white-space:nowrap;
+}
+.sync-pill .dot{ width:7px; height:7px; border-radius:50%; background: var(--ink-faint); }
+.sync-pill.online .dot{ background: var(--accent); }
+.sync-pill.offline .dot{ background: var(--ink-faint); }
+.sync-pill.error .dot{ background: var(--danger); }
+.sync-pill.busy .dot{ background: var(--warn); animation: pulse 1s infinite ease-in-out; }
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+.btn{
+  display:flex; align-items:center; gap:7px;
+  font-size:13px; font-weight:600;
+  padding:7px 13px;
+  border-radius: var(--radius-sm);
+  border:1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  transition: background .12s ease, transform .04s ease, border-color .12s ease;
+}
+.btn:hover{ background: var(--surface-2); }
+.btn:active{ transform: translateY(1px); }
+.btn svg{ width:15px; height:15px; }
+.btn-primary{
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-primary:hover{ background:#365e46; }
+.btn-primary:disabled{ opacity:.5; cursor:default; }
+.btn-primary:disabled:hover{ background: var(--accent); }
+.btn-ghost{
+  background:transparent;
+  border-color:transparent;
+  color: var(--ink-muted);
+}
+.btn-ghost:hover{ background: var(--surface-2); color: var(--ink); }
+.btn-danger-ghost{
+  background:transparent;
+  border-color:transparent;
+  color: var(--danger);
+}
+.btn-danger-ghost:hover{ background: var(--danger-soft); }
+.btn-block{ width:100%; justify-content:center; }
+.btn-sm{ padding:6px 10px; font-size:12px; }
+
+/* ---------- Layout body ---------- */
+.layout{
+  flex:1;
+  display:flex;
+  min-height:0;
+}
+
+/* ---------- Sidebar ---------- */
+#sidebar{
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  background: var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  transition: margin-left .18s ease, opacity .15s ease;
+}
+#sidebar.collapsed{
+  margin-left: calc(var(--sidebar-w) * -1);
+  opacity:0;
+  pointer-events:none;
+}
+
+.sidebar-top{
+  padding:14px 14px 10px 14px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.search-row{
+  display:flex; align-items:center; gap:8px;
+  background: var(--bg);
+  border:1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding:6px 9px;
+}
+.search-row svg{ width:14px; height:14px; color: var(--ink-faint); }
+.search-row input{
+  border:none; outline:none; background:transparent;
+  font-size:13px; color: var(--ink); flex:1; min-width:0;
+}
+.search-row input::placeholder{ color: var(--ink-faint); }
+
+.note-list{
+  flex:1;
+  overflow-y:auto;
+  padding: 4px 8px 8px 8px;
+  display:flex; flex-direction:column; gap:2px;
+}
+.note-list::-webkit-scrollbar{ width:8px; }
+.note-list::-webkit-scrollbar-thumb{ background: var(--border-strong); border-radius:8px; }
+
+.note-item{
+  display:flex; align-items:center; gap:9px;
+  padding:8px 9px;
+  border-radius: var(--radius-sm);
+  cursor:pointer;
+  border:1px solid transparent;
+  position:relative;
+}
+.note-item:hover{ background: var(--surface-2); }
+.note-item.active{
+  background: var(--accent-soft);
+  border-color: var(--accent-soft-border);
+}
+.note-item .status-dot{
+  width:6px; height:6px; border-radius:50%;
+  background: var(--ink-faint);
+  flex-shrink:0;
+}
+.note-item .status-dot.synced{ background: var(--accent); }
+.note-item .status-dot.local{ background: var(--warn); }
+.note-item .meta{ flex:1; min-width:0; }
+.note-item .title{
+  font-size:13px; font-weight:500; color: var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.note-item.active .title{ color: #1f3a2b; }
+.note-item .sub{
+  font-size:11px; color: var(--ink-faint);
+  font-family: var(--font-mono);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin-top:1px;
+}
+.note-item .del-btn{
+  opacity:0; width:22px; height:22px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  border-radius: var(--radius-sm);
+  color: var(--ink-faint);
+}
+.note-item:hover .del-btn{ opacity:1; }
+.note-item .del-btn:hover{ background: var(--danger-soft); color: var(--danger); }
+.note-item .del-btn svg{ width:14px; height:14px; }
+
+.empty-list{
+  padding: 22px 14px;
+  text-align:center;
+  color: var(--ink-faint);
+  font-size:12.5px;
+  line-height:1.6;
+}
+
+/* ---------- Sidebar bottom: GitHub settings ---------- */
+.sidebar-bottom{
+  border-top:1px solid var(--border);
+  padding: 10px;
+  flex-shrink:0;
+}
+.gh-toggle{
+  width:100%;
+  display:flex; align-items:center; gap:9px;
+  padding:8px 9px;
+  border-radius: var(--radius-sm);
+  background:transparent;
+  border:1px solid transparent;
+  color: var(--ink-muted);
+  font-size:12.5px;
+  font-weight:600;
+}
+.gh-toggle:hover{ background: var(--surface-2); }
+.gh-toggle svg{ width:16px; height:16px; }
+.gh-toggle .gh-status-dot{
+  width:6px; height:6px; border-radius:50%;
+  background: var(--ink-faint); margin-left:auto;
+}
+.gh-toggle .gh-status-dot.on{ background: var(--accent); }
+.gh-toggle .chev{ width:13px; height:13px; margin-left:6px; transition: transform .15s ease; color: var(--ink-faint); }
+.gh-toggle.open .chev{ transform: rotate(180deg); }
+
+#githubPanel{
+  overflow:hidden;
+  max-height:0;
+  transition: max-height .2s ease;
+}
+#githubPanel.open{ max-height:520px; }
+.gh-form{
+  padding:12px 8px 4px 8px;
+  display:flex; flex-direction:column; gap:10px;
+}
+.field{ display:flex; flex-direction:column; gap:4px; }
+.field label{
+  font-size:11px; font-weight:600; letter-spacing:.02em;
+  color: var(--ink-muted); text-transform:uppercase;
+}
+.field input{
+  border:1px solid var(--border);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding:7px 9px;
+  font-size:12.5px;
+  color: var(--ink);
+  outline:none;
+}
+.field input:focus{ border-color: var(--accent); }
+.field-hint{ font-size:11px; color: var(--ink-faint); line-height:1.5; }
+.field-hint a{ color: var(--accent); }
+.gh-actions{ display:flex; gap:8px; margin-top:2px; }
+.gh-msg{
+  font-size:11.5px; line-height:1.5;
+  padding:7px 9px;
+  border-radius: var(--radius-sm);
+  display:none;
+}
+.gh-msg.show{ display:block; }
+.gh-msg.ok{ background: var(--accent-soft); color:#2a4d38; }
+.gh-msg.err{ background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Workspace ---------- */
+#workspace{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  padding: 22px 0 0 0;
+  overflow:hidden;
+}
+.editor-shell{
+  flex:1;
+  width:100%;
+  max-width: min(1180px, 96%);
+  margin:0 auto;
+  padding: 0 clamp(20px, 4.5vw, 64px);
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+.title-input{
+  border:none; outline:none; background:transparent;
+  font-family: var(--font-sans);
+  font-size: 26px;
+  font-weight:700;
+  color: var(--ink);
+  padding-bottom: 12px;
+  width:100%;
+  flex-shrink:0;
+}
+.title-input::placeholder{ color: var(--ink-faint); }
+
+.editor-footer{
+  flex-shrink:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding: 8px clamp(20px, 4.5vw, 64px) 14px clamp(20px, 4.5vw, 64px);
+  font-family: var(--font-mono);
+  font-size:11.5px;
+  color: var(--ink-faint);
+}
+.editor-footer .fname{ opacity:.85; }
+
+.empty-state{
+  flex:1;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:14px;
+  color: var(--ink-faint);
+  text-align:center;
+  padding: 0 30px;
+}
+.empty-state svg{ width:38px; height:38px; opacity:.5; }
+.empty-state h2{ font-size:16px; color: var(--ink-muted); margin:0; font-weight:600; }
+.empty-state p{ font-size:13px; margin:0; max-width:340px; line-height:1.6; }
+
+/* =========================================================
+   Toolbar (drives the CodeMirror instance directly)
+   ========================================================= */
+.md-toolbar{
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:2px;
+  padding: 4px 2px 12px 2px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:14px;
+}
+.md-toolbar .tb-sep{
+  width:1px; align-self:stretch;
+  background: var(--border);
+  margin: 2px 6px;
+}
+.tb-btn{
+  width:30px; height:30px;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent;
+  border:1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--ink-muted);
+}
+.tb-btn:hover{
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--ink);
+}
+.tb-btn:active{ transform: translateY(1px); }
+.tb-btn svg{ width:16px; height:16px; }
+.tb-btn text{ font-size:13px; }
+
+/* =========================================================
+   CodeMirror theming — background must stay exactly #f4f3ee
+   ========================================================= */
+.cm-wrap{
+  flex:1;
+  min-height:0;
+  display:flex;
+}
+.CodeMirror{
+  flex:1;
+  background: #f4f3ee !important;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height:1.7;
+  height:100%;
+}
+.CodeMirror-gutters{
+  background: #f4f3ee !important;
+  border-right: 1px solid var(--border);
+}
+.CodeMirror-linenumber{
+  color: var(--ink-faint);
+  font-family: var(--font-mono);
+  font-size:12px;
+  padding: 0 10px 0 4px;
+}
+.CodeMirror-cursor{ border-left: 1.5px solid var(--accent) !important; }
+.CodeMirror-selected{ background: var(--accent-soft) !important; }
+.CodeMirror-activeline-background{ background: var(--surface-2) !important; }
+.CodeMirror-focused .CodeMirror-activeline-background{ background: var(--surface-2) !important; }
+.CodeMirror pre.CodeMirror-line{ padding: 0 2px; }
+.CodeMirror-placeholder{ color: var(--ink-faint) !important; opacity:1 !important; }
+
+.cm-header{ color:#233c2c; font-weight:700; font-family: var(--font-sans); }
+.cm-header-1{ font-size:1.7em; }
+.cm-header-2{ font-size:1.4em; }
+.cm-header-3{ font-size:1.2em; }
+.cm-header-4, .cm-header-5, .cm-header-6{ font-size:1.05em; }
+.cm-strong{ color: var(--ink); font-weight:700; }
+.cm-em{ color: var(--ink); font-style:italic; }
+.cm-strikethrough{ text-decoration: line-through; color: var(--ink-faint); }
+.cm-quote{ color: var(--ink-muted); font-style:italic; }
+.cm-link{ color: var(--accent); }
+.cm-url{ color: var(--ink-faint); }
+.cm-comment{
+  font-family: var(--font-mono);
+  background: var(--surface-2);
+  border-radius:3px;
+  color:#4a4536;
+}
+.cm-variable-2{ color:#4a6b52; }
+.cm-formatting{ color: var(--ink-faint); }
+.CodeMirror-matchingbracket{ color: var(--accent) !important; }
+
+/* Scrollbars, generic */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background: var(--border-strong); border-radius:8px; }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* Toast */
+#toast{
+  position:fixed; bottom:22px; left:50%; transform:translateX(-50%) translateY(8px);
+  background:#232219; color:#f4f3ee;
+  font-size:12.5px; font-family: var(--font-mono);
+  padding:9px 16px; border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  opacity:0; pointer-events:none;
+  transition: opacity .18s ease, transform .18s ease;
+  z-index:100;
+  max-width: 60vw;
+}
+#toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+#toast.err{ background:#4a2420; }
+
+@media (max-width: 760px){
+  :root{ --sidebar-w: 240px; }
+  #sidebar{ position:fixed; top:52px; bottom:0; left:0; z-index:30; box-shadow: 8px 0 24px rgba(0,0,0,.12); }
+  .editor-shell{ max-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header>
+    <button class="icon-btn" id="sidebarToggle" title="Toggle sidebar" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+        <line x1="9.5" y1="4" x2="9.5" y2="20"></line>
+      </svg>
+    </button>
+
+    <div class="header-path">
+      <span>~/notes</span>
+      <span class="sep">/</span>
+      <span class="note-name" id="headerNoteName">no note open</span>
+      <span class="dirty-dot" id="dirtyDot" title="Unsaved changes"></span>
+    </div>
+
+    <div class="header-actions">
+      <div class="sync-pill offline" id="syncPill">
+        <span class="dot"></span>
+        <span id="syncPillText">local only</span>
+      </div>
+      <button class="btn btn-primary" id="saveBtn" title="Save (Ctrl/Cmd+S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path>
+          <path d="M17 21v-8H7v8"></path>
+          <path d="M7 3v5h8"></path>
+        </svg>
+        <span>Save</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <aside id="sidebar">
+      <div class="sidebar-top">
+        <button class="btn btn-primary btn-block" id="newNoteBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New note</span>
+        </button>
+        <div class="search-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" placeholder="Filter notes...">
+        </div>
+      </div>
+
+      <div class="note-list" id="noteList">
+        <!-- rendered by JS -->
+      </div>
+
+      <div class="sidebar-bottom">
+        <button class="gh-toggle" id="githubToggle">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .3a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58l-.01-2.03c-3.34.73-4.04-1.42-4.04-1.42-.55-1.38-1.34-1.75-1.34-1.75-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .3Z"/>
+          </svg>
+          <span>GitHub sync</span>
+          <span class="gh-status-dot" id="ghStatusDot"></span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </button>
+
+        <div id="githubPanel">
+          <div class="gh-form">
+            <div class="field">
+              <label for="ghUsername">GitHub username</label>
+              <input type="text" id="ghUsername" placeholder="octocat" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="ghRepo">Repository</label>
+              <input type="text" id="ghRepo" placeholder="bugbounty-notes" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="ghBranch">Branch</label>
+              <input type="text" id="ghBranch" placeholder="main" autocomplete="off">
+            </div>
+            <div class="field">
+              <label for="ghToken">Personal access token</label>
+              <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+              <div class="field-hint">Stored only in this browser's localStorage. Needs <code>repo</code> scope for private repos.</div>
+            </div>
+
+            <div class="gh-msg" id="ghMsg"></div>
+
+            <div class="gh-actions">
+              <button class="btn btn-primary" id="ghConnectBtn" style="flex:1;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12a9 9 0 1 1-6.22-8.56"></path>
+                  <polyline points="21 3 21 9 15 9"></polyline>
+                </svg>
+                <span id="ghConnectBtnText">Connect &amp; sync</span>
+              </button>
+              <button class="btn btn-ghost btn-sm" id="ghDisconnectBtn" title="Forget credentials">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main id="workspace">
+      <!-- editor / empty state injected by JS -->
+    </main>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   Constants & small utilities
+   ========================================================= */
+const NOTES_DIR = "notes";
+const LS_SETTINGS = "fieldnotes.gh.settings";
+const LS_LOCAL_NOTES = "fieldnotes.local.notes";
+const LS_SIDEBAR = "fieldnotes.sidebar.collapsed";
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+function uid(){
+  return Math.random().toString(36).slice(2, 8);
+}
+
+function slugify(str){
+  return (str || "untitled")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 48) || "untitled";
+}
+
+function b64EncodeUnicode(str){
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+    (_, p1) => String.fromCharCode("0x" + p1)));
+}
+function b64DecodeUnicode(str){
+  return decodeURIComponent(atob(str).split("").map(
+    c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
+  ).join(""));
+}
+
+function extractTitle(content){
+  if(!content) return "Untitled";
+  const lines = content.split("\n");
+  for(const line of lines){
+    const trimmed = line.trim();
+    if(trimmed.startsWith("#")){
+      const t = trimmed.replace(/^#+\s*/, "").trim();
+      if(t) return t;
+    }
+  }
+  const firstNonEmpty = lines.find(l => l.trim().length > 0);
+  return firstNonEmpty ? firstNonEmpty.trim().slice(0, 60) : "Untitled";
+}
+
+function fmtTime(ts){
+  if(!ts) return "";
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  if(sameDay){
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  }
+  return d.toLocaleDateString([], {month:"short", day:"numeric"});
+}
+
+let toastTimer = null;
+function toast(msg, isErr){
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.toggle("err", !!isErr);
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+/* =========================================================
+   State
+   ========================================================= */
+const state = {
+  settings: loadSettings(),          // {username, repo, branch, token}
+  connected: false,
+  notes: [],                         // [{name, path, sha, title, content, loaded, dirty, source:'github'|'local', updatedAt}]
+  currentName: null,
+  cm: null,                          // CodeMirror instance
+  suppressChange: false,
+  sidebarCollapsed: localStorage.getItem(LS_SIDEBAR) === "1",
+  filter: "",
+  busy: false,
+};
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_SETTINGS);
+    return raw ? JSON.parse(raw) : {username:"", repo:"", branch:"main", token:""};
+  }catch(e){
+    return {username:"", repo:"", branch:"main", token:""};
+  }
+}
+function saveSettingsToStorage(){
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
+}
+function clearSettingsStorage(){
+  localStorage.removeItem(LS_SETTINGS);
+}
+
+function loadLocalNotes(){
+  try{
+    const raw = localStorage.getItem(LS_LOCAL_NOTES);
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){ return []; }
+}
+function saveLocalNotesToStorage(){
+  const localOnly = state.notes.filter(n => n.source === "local");
+  localStorage.setItem(LS_LOCAL_NOTES, JSON.stringify(localOnly.map(n => ({
+    name:n.name, title:n.title, content:n.content, updatedAt:n.updatedAt
+  }))));
+}
+
+function hasGitHubConfig(){
+  const s = state.settings;
+  return !!(s.username && s.repo && s.token);
+}
+
+/* =========================================================
+   GitHub REST API layer  (untouched sync logic)
+   ========================================================= */
+function ghHeaders(){
+  return {
+    "Authorization": "token " + state.settings.token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "Content-Type": "application/json",
+  };
+}
+
+function ghBase(){
+  return `https://api.github.com/repos/${encodeURIComponent(state.settings.username)}/${encodeURIComponent(state.settings.repo)}`;
+}
+
+function branchParam(){
+  return state.settings.branch ? `?ref=${encodeURIComponent(state.settings.branch)}` : "";
+}
+
+async function ghListNotes(){
+  const url = `${ghBase()}/contents/${NOTES_DIR}${branchParam()}`;
+  const res = await fetch(url, {headers: ghHeaders()});
+  if(res.status === 404){
+    return []; // folder doesn't exist yet
+  }
+  if(!res.ok){
+    throw await ghError(res);
+  }
+  const data = await res.json();
+  if(!Array.isArray(data)) return [];
+  return data.filter(f => f.type === "file" && f.name.endsWith(".md"));
+}
+
+async function ghGetFile(path){
+  const url = `${ghBase()}/contents/${path}${branchParam()}`;
+  const res = await fetch(url, {headers: ghHeaders()});
+  if(!res.ok){
+    throw await ghError(res);
+  }
+  const data = await res.json();
+  return {
+    sha: data.sha,
+    content: b64DecodeUnicode(data.content.replace(/\n/g, "")),
+  };
+}
+
+async function ghPutFile(path, content, sha, message){
+  const url = `${ghBase()}/contents/${path}`;
+  const body = {
+    message: message || `Update ${path}`,
+    content: b64EncodeUnicode(content),
+  };
+  if(sha) body.sha = sha;
+  if(state.settings.branch) body.branch = state.settings.branch;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: ghHeaders(),
+    body: JSON.stringify(body),
+  });
+  if(!res.ok){
+    throw await ghError(res);
+  }
+  const data = await res.json();
+  return data.content.sha;
+}
+
+async function ghDeleteFile(path, sha, message){
+  const url = `${ghBase()}/contents/${path}`;
+  const body = {
+    message: message || `Delete ${path}`,
+    sha: sha,
+  };
+  if(state.settings.branch) body.branch = state.settings.branch;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: ghHeaders(),
+    body: JSON.stringify(body),
+  });
+  if(!res.ok){
+    throw await ghError(res);
+  }
+}
+
+async function ghVerifyRepo(){
+  const res = await fetch(ghBase(), {headers: ghHeaders()});
+  if(!res.ok){
+    throw await ghError(res);
+  }
+  return res.json();
+}
+
+async function ghError(res){
+  let detail = "";
+  try{
+    const j = await res.json();
+    detail = j.message || "";
+  }catch(e){}
+  if(res.status === 401) return new Error("Authentication failed — check your personal access token.");
+  if(res.status === 404) return new Error("Repository not found — check username/repo, or the token lacks access.");
+  if(res.status === 403) return new Error(detail || "Forbidden — token may be missing the repo scope, or rate limit hit.");
+  if(res.status === 409) return new Error("Conflict — the file changed upstream. Reload and try again.");
+  return new Error(detail || `GitHub API error (${res.status})`);
+}
+
+/* =========================================================
+   Sync status pill
+   ========================================================= */
+function setSyncPill(mode, text){
+  const pill = $("#syncPill");
+  pill.className = "sync-pill " + mode;
+  $("#syncPillText").textContent = text;
+}
+
+function updateGhStatusDot(){
+  $("#ghStatusDot").classList.toggle("on", state.connected);
+}
+
+/* =========================================================
+   Note list rendering
+   ========================================================= */
+function visibleNotes(){
+  const q = state.filter.trim().toLowerCase();
+  const sorted = [...state.notes].sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+  if(!q) return sorted;
+  return sorted.filter(n => (n.title||"").toLowerCase().includes(q) || n.name.toLowerCase().includes(q));
+}
+
+function renderNoteList(){
+  const list = $("#noteList");
+  const notes = visibleNotes();
+  list.innerHTML = "";
+
+  if(notes.length === 0){
+    const empty = document.createElement("div");
+    empty.className = "empty-list";
+    empty.textContent = state.notes.length === 0
+      ? "No notes yet. Start a new one — it will save here and, if connected, sync to GitHub."
+      : "No notes match your filter.";
+    list.appendChild(empty);
+    return;
+  }
+
+  for(const note of notes){
+    const item = document.createElement("div");
+    item.className = "note-item" + (note.name === state.currentName ? " active" : "");
+    item.dataset.name = note.name;
+
+    const dot = document.createElement("span");
+    dot.className = "status-dot " + (note.source === "github" && !note.dirty ? "synced" : "local");
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = note.title || "Untitled";
+    const sub = document.createElement("div");
+    sub.className = "sub";
+    sub.textContent = (note.dirty ? "unsaved · " : "") + fmtTime(note.updatedAt);
+    meta.appendChild(title);
+    meta.appendChild(sub);
+
+    const del = document.createElement("button");
+    del.className = "del-btn";
+    del.title = "Delete note";
+    del.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteNote(note.name);
+    });
+
+    item.appendChild(dot);
+    item.appendChild(meta);
+    item.appendChild(del);
+    item.addEventListener("click", () => selectNote(note.name));
+    list.appendChild(item);
+  }
+}
+
+/* =========================================================
+   Toolbar icons (inline SVG only) + actions wired to CodeMirror
+   ========================================================= */
+const TB_ICON = {
+  bold: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h7a3.5 3.5 0 0 1 0 7H6z"></path><path d="M6 11h8a3.5 3.5 0 0 1 0 7H6z"></path></svg>`,
+  italic: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>`,
+  heading: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16"></path><path d="M18 4v16"></path><path d="M6 12h12"></path></svg>`,
+  quote: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21c3 0 6-1.3 6-7V5H3v9h5c0 3-1.7 5-5 5"></path><path d="M13 21c3 0 6-1.3 6-7V5h-6v9h5c0 3-1.7 5-5 5"></path></svg>`,
+  code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 6 2 12 8 18"></polyline><polyline points="16 6 22 12 16 18"></polyline></svg>`,
+  codeblock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m6 9 3 3-3 3"></path><line x1="12" y1="15" x2="16" y2="15"></line></svg>`,
+  ul: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="21" y2="6"></line><line x1="9" y1="12" x2="21" y2="12"></line><line x1="9" y1="18" x2="21" y2="18"></line><circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"></circle><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none"></circle></svg>`,
+  ol: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="10" y1="6" x2="21" y2="6"></line><line x1="10" y1="12" x2="21" y2="12"></line><line x1="10" y1="18" x2="21" y2="18"></line><text x="2" y="9" font-size="7" fill="currentColor" stroke="none" font-family="inherit">1</text><text x="2" y="15" font-size="7" fill="currentColor" stroke="none" font-family="inherit">2</text><text x="2" y="21" font-size="7" fill="currentColor" stroke="none" font-family="inherit">3</text></svg>`,
+  link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>`,
+  image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>`,
+  table: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>`,
+  hr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="12" x2="20" y2="12"></line></svg>`,
+  guide: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2-2.4 3.7"></path><circle cx="12" cy="17.2" r="0.4" fill="currentColor"></circle></svg>`,
+};
+
+function cmWrapSelection(before, after){
+  const cm = state.cm;
+  after = (after === undefined) ? before : after;
+  const selection = cm.getSelection();
+  if(selection){
+    cm.replaceSelection(before + selection + after, "around");
+  }else{
+    const cursor = cm.getCursor();
+    cm.replaceSelection(before + after);
+    cm.setCursor({line: cursor.line, ch: cursor.ch + before.length});
+  }
+  cm.focus();
+}
+
+function cmToggleLinePrefix(prefix){
+  const cm = state.cm;
+  const cursor = cm.getCursor();
+  const line = cm.getLine(cursor.line);
+  const from = {line: cursor.line, ch: 0};
+  const to = {line: cursor.line, ch: line.length};
+  if(line.startsWith(prefix)){
+    cm.replaceRange(line.slice(prefix.length), from, to);
+  }else{
+    cm.replaceRange(prefix + line, from, to);
+  }
+  cm.focus();
+}
+
+function cmToggleHeading(){
+  const cm = state.cm;
+  const cursor = cm.getCursor();
+  const line = cm.getLine(cursor.line);
+  const match = line.match(/^(#{1,6})\s?/);
+  const from = {line: cursor.line, ch: 0};
+  const to = {line: cursor.line, ch: line.length};
+  const stripped = line.replace(/^#{1,6}\s?/, "");
+  if(!match){
+    cm.replaceRange("# " + stripped, from, to);
+  }else if(match[1].length < 3){
+    cm.replaceRange("#".repeat(match[1].length + 1) + " " + stripped, from, to);
+  }else{
+    cm.replaceRange(stripped, from, to);
+  }
+  cm.focus();
+}
+
+function cmInlineCode(){ cmWrapSelection("`", "`"); }
+
+function cmCodeBlock(){
+  const cm = state.cm;
+  const selection = cm.getSelection();
+  if(selection){
+    cm.replaceSelection("```\n" + selection + "\n```", "around");
+  }else{
+    const cursor = cm.getCursor();
+    cm.replaceSelection("```\n\n```");
+    cm.setCursor({line: cursor.line + 1, ch: 0});
+  }
+  cm.focus();
+}
+
+function cmOrderedList(){
+  const cm = state.cm;
+  const cursor = cm.getCursor();
+  const line = cm.getLine(cursor.line);
+  const from = {line: cursor.line, ch: 0};
+  const to = {line: cursor.line, ch: line.length};
+  if(/^\d+\.\s/.test(line)){
+    cm.replaceRange(line.replace(/^\d+\.\s/, ""), from, to);
+  }else{
+    cm.replaceRange("1. " + line, from, to);
+  }
+  cm.focus();
+}
+
+function cmLink(){
+  const cm = state.cm;
+  const selection = cm.getSelection();
+  const label = selection || "link text";
+  cm.replaceSelection(`[${label}](https://)`);
+  cm.focus();
+}
+
+function cmImage(){
+  const cm = state.cm;
+  const selection = cm.getSelection();
+  const label = selection || "alt text";
+  cm.replaceSelection(`![${label}](https://)`);
+  cm.focus();
+}
+
+function cmTable(){
+  const cm = state.cm;
+  const cursor = cm.getCursor();
+  const needsNewline = cm.getLine(cursor.line).length > 0;
+  const snippet = (needsNewline ? "\n" : "") + "| Header | Header |\n| --- | --- |\n| Cell | Cell |\n";
+  cm.replaceRange(snippet, cursor);
+  cm.focus();
+}
+
+function cmHr(){
+  const cm = state.cm;
+  const cursor = cm.getCursor();
+  const needsNewline = cm.getLine(cursor.line).length > 0;
+  cm.replaceRange((needsNewline ? "\n" : "") + "---\n", cursor);
+  cm.focus();
+}
+
+function openGuide(){
+  window.open("https://www.markdownguide.org/basic-syntax/", "_blank", "noopener");
+}
+
+const TOOLBAR_ITEMS = [
+  {icon:"bold", title:"Bold (**text**)", action: () => cmWrapSelection("**", "**")},
+  {icon:"italic", title:"Italic (_text_)", action: () => cmWrapSelection("_", "_")},
+  {icon:"heading", title:"Heading (cycles H1–H6)", action: cmToggleHeading},
+  {sep:true},
+  {icon:"quote", title:"Quote", action: () => cmToggleLinePrefix("> ")},
+  {icon:"code", title:"Inline code", action: cmInlineCode},
+  {icon:"codeblock", title:"Code block", action: cmCodeBlock},
+  {icon:"ul", title:"Bulleted list", action: () => cmToggleLinePrefix("- ")},
+  {icon:"ol", title:"Numbered list", action: cmOrderedList},
+  {sep:true},
+  {icon:"link", title:"Link", action: cmLink},
+  {icon:"image", title:"Image", action: cmImage},
+  {icon:"table", title:"Table", action: cmTable},
+  {icon:"hr", title:"Horizontal rule", action: cmHr},
+  {sep:true},
+  {icon:"guide", title:"Markdown guide", action: openGuide},
+];
+
+function buildToolbar(){
+  const bar = document.createElement("div");
+  bar.className = "md-toolbar";
+  for(const item of TOOLBAR_ITEMS){
+    if(item.sep){
+      const sep = document.createElement("span");
+      sep.className = "tb-sep";
+      bar.appendChild(sep);
+      continue;
+    }
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tb-btn";
+    btn.title = item.title;
+    btn.innerHTML = TB_ICON[item.icon];
+    btn.addEventListener("mousedown", (e) => e.preventDefault()); // keep CodeMirror focus/selection
+    btn.addEventListener("click", () => item.action());
+    bar.appendChild(btn);
+  }
+  return bar;
+}
+
+/* =========================================================
+   Editor (CodeMirror 5)
+   ========================================================= */
+function initEditor(){
+  const workspace = $("#workspace");
+  workspace.innerHTML = `
+    <div class="editor-shell" id="editorShell" style="display:none;">
+      <input type="text" id="titleInput" class="title-input" placeholder="Untitled note" autocomplete="off">
+      <div id="toolbarMount"></div>
+      <div class="cm-wrap" id="cmMount"></div>
+    </div>
+    <div class="editor-footer" id="editorFooter" style="display:none;">
+      <span class="fname" id="footerFilename"></span>
+      <span id="footerCounts"></span>
+    </div>
+    <div class="empty-state" id="emptyState">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="9" y1="13" x2="15" y2="13"></line>
+        <line x1="9" y1="17" x2="13" y2="17"></line>
+      </svg>
+      <h2>No note open</h2>
+      <p>Select a note from the sidebar, or start a new one. Notes save locally and sync to your private GitHub repo when connected.</p>
+    </div>
+  `;
+
+  // Toolbar sits above the CodeMirror canvas, inside the editor shell.
+  $("#toolbarMount").replaceWith(buildToolbarWrapped());
+
+  state.cm = CodeMirror($("#cmMount"), {
+    value: "",
+    mode: "markdown",
+    theme: "default",
+    lineNumbers: true,
+    lineWrapping: true,
+    styleActiveLine: true,
+    placeholder: "Start writing — scope, endpoints, requests, payloads, findings...",
+    viewportMargin: 50, // finite viewport so the DOM stays real (native scrolling, not infinite render)
+    extraKeys: {
+      "Tab": (cm) => cm.replaceSelection("  ", "end"),
+    },
+  });
+
+  state.cm.on("change", () => {
+    if(state.suppressChange) return;
+    onEditorChange();
+  });
+
+  $("#titleInput").addEventListener("input", () => {
+    if(state.suppressChange) return;
+    onTitleInput();
+  });
+}
+
+function buildToolbarWrapped(){
+  const toolbar = buildToolbar();
+  toolbar.id = "toolbarMount";
+  return toolbar;
+}
+
+function onEditorChange(){
+  const note = getCurrentNote();
+  if(!note) return;
+  note.content = state.cm.getValue();
+  if(!note.titleLocked){
+    const derivedTitle = extractTitle(note.content);
+    note.title = derivedTitle;
+    const ti = $("#titleInput");
+    if(document.activeElement !== ti) ti.value = note.title === "Untitled" ? "" : note.title;
+  }
+  markDirty(note);
+}
+
+function onTitleInput(){
+  const note = getCurrentNote();
+  if(!note) return;
+  const val = $("#titleInput").value;
+  note.title = val.trim() ? val.trim() : "Untitled";
+  note.titleLocked = true;
+  markDirty(note);
+  renderNoteList();
+  updateHeader();
+}
+
+function markDirty(note){
+  note.dirty = true;
+  note.updatedAt = Date.now();
+  saveLocalNotesToStorage();
+  renderNoteList();
+  updateHeader();
+  updateFooterCounts();
+}
+
+function getCurrentNote(){
+  return state.notes.find(n => n.name === state.currentName) || null;
+}
+
+/* Dynamic breadcrumb / filename display — derived live from the note's
+   current title rather than a fixed value, so it always reflects what's
+   being typed instead of staying stuck on the original filename. */
+function displaySlugName(note){
+  if(!note) return null;
+  return `${slugify(note.title || "untitled")}.md`;
+}
+
+function updateHeader(){
+  const note = getCurrentNote();
+  $("#headerNoteName").textContent = note ? displaySlugName(note) : "no note open";
+  $("#dirtyDot").classList.toggle("show", !!(note && note.dirty));
+  $("#saveBtn").disabled = false;
+}
+
+function updateFooterCounts(){
+  const note = getCurrentNote();
+  if(!note){ return; }
+  const text = note.content || "";
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  $("#footerCounts").textContent = `${words} words · ${text.length} chars`;
+  $("#footerFilename").textContent = `${NOTES_DIR}/${displaySlugName(note)}`;
+}
+
+/* =========================================================
+   Note actions
+   ========================================================= */
+function newNote(){
+  const name = `untitled-${uid()}.md`;
+  const note = {
+    name,
+    path: `${NOTES_DIR}/${name}`,
+    sha: null,
+    title: "Untitled",
+    titleLocked: false,
+    content: "",
+    loaded: true,
+    dirty: true,
+    source: "local",
+    updatedAt: Date.now(),
+  };
+  state.notes.unshift(note);
+  saveLocalNotesToStorage();
+  renderNoteList();
+  selectNote(name);
+  $("#titleInput").focus();
+}
+
+async function selectNote(name){
+  const note = state.notes.find(n => n.name === name);
+  if(!note) return;
+
+  if(!note.loaded && note.source === "github"){
+    try{
+      setSyncPill("busy", "loading...");
+      const file = await ghGetFile(note.path);
+      note.content = file.content;
+      note.sha = file.sha;
+      note.title = extractTitle(file.content);
+      note.loaded = true;
+      restoreSyncPillIdle();
+    }catch(err){
+      restoreSyncPillIdle();
+      toast(err.message, true);
+      return;
+    }
+  }
+
+  state.currentName = name;
+  state.suppressChange = true;
+  state.cm.setValue(note.content || "");
+  state.cm.clearHistory();
+  $("#titleInput").value = note.title === "Untitled" ? "" : note.title;
+  state.suppressChange = false;
+
+  $("#emptyState").style.display = "none";
+  $("#editorShell").style.display = "flex";
+  $("#editorFooter").style.display = "flex";
+
+  renderNoteList();
+  updateHeader();
+  updateFooterCounts();
+  setTimeout(() => state.cm.refresh(), 0);
+}
+
+async function saveCurrentNote(){
+  const note = getCurrentNote();
+  if(!note){ toast("No note open"); return; }
+
+  note.content = state.cm.getValue();
+  const titleVal = $("#titleInput").value.trim();
+  note.title = titleVal || extractTitle(note.content) || "Untitled";
+  const desiredName = slugify(note.title || "untitled") + ".md";
+  const desiredPath = NOTES_DIR + "/" + desiredName;
+  const previousName = note.name;
+  const previousPath = note.path;
+  const previousSha = note.sha;
+
+  note.name = desiredName;
+  note.path = desiredPath;
+
+  if(state.currentName === previousName){
+    state.currentName = desiredName;
+  }
+
+  if(!hasGitHubConfig()){
+    note.dirty = false;
+    note.source = "local";
+    note.updatedAt = Date.now();
+    saveLocalNotesToStorage();
+    renderNoteList();
+    updateHeader();
+    toast("Saved locally. Connect GitHub to sync.");
+    return;
+  }
+
+  try{
+    setSyncPill("busy", "saving...");
+    let sha;
+    if(previousPath !== desiredPath){
+      if(previousSha){
+        sha = await ghPutFile(desiredPath, note.content, null, `Rename ${previousName} to ${desiredName}`);
+        await ghDeleteFile(previousPath, previousSha, `Delete old path ${previousName}`);
+      }else{
+        sha = await ghPutFile(desiredPath, note.content, null, `Add ${desiredName}`);
+      }
+    }else{
+      sha = await ghPutFile(note.path, note.content, note.sha, `${note.sha ? "Update" : "Add"} ${note.name}`);
+    }
+    note.sha = sha;
+    note.dirty = false;
+    note.source = "github";
+    note.updatedAt = Date.now();
+    saveLocalNotesToStorage();
+    renderNoteList();
+    updateHeader();
+    restoreSyncPillIdle();
+    toast(`Saved to GitHub — ${note.name}`);
+  }catch(err){
+    setSyncPill("error", "save failed");
+    toast(err.message, true);
+  }
+}
+
+async function deleteNote(name){
+  const note = state.notes.find(n => n.name === name);
+  if(!note) return;
+  const ok = confirm(`Delete "${note.title || note.name}"? This cannot be undone.`);
+  if(!ok) return;
+
+  if(note.source === "github" && note.sha && hasGitHubConfig()){
+    try{
+      setSyncPill("busy", "deleting...");
+      await ghDeleteFile(note.path, note.sha, `Delete ${note.name}`);
+      restoreSyncPillIdle();
+    }catch(err){
+      restoreSyncPillIdle();
+      toast(err.message, true);
+      return;
+    }
+  }
+
+  state.notes = state.notes.filter(n => n.name !== name);
+  saveLocalNotesToStorage();
+
+  if(state.currentName === name){
+    state.currentName = null;
+    $("#editorShell").style.display = "none";
+    $("#editorFooter").style.display = "none";
+    $("#emptyState").style.display = "flex";
+  }
+
+  renderNoteList();
+  toast("Note deleted");
+}
+
+/* =========================================================
+   GitHub connect / sync flow  (untouched)
+   ========================================================= */
+function restoreSyncPillIdle(){
+  if(state.connected){
+    setSyncPill("online", `${state.settings.username}/${state.settings.repo}`);
+  }else{
+    setSyncPill("offline", "local only");
+  }
+}
+
+function showGhMsg(msg, isErr){
+  const el = $("#ghMsg");
+  el.textContent = msg;
+  el.className = "gh-msg show " + (isErr ? "err" : "ok");
+}
+
+async function connectGitHub(){
+  const username = $("#ghUsername").value.trim();
+  const repo = $("#ghRepo").value.trim();
+  const branch = $("#ghBranch").value.trim() || "main";
+  const token = $("#ghToken").value.trim();
+
+  if(!username || !repo || !token){
+    showGhMsg("Username, repository, and token are required.", true);
+    return;
+  }
+
+  state.settings = {username, repo, branch, token};
+
+  const btn = $("#ghConnectBtn");
+  const btnText = $("#ghConnectBtnText");
+  btn.disabled = true;
+  btnText.textContent = "Connecting...";
+  setSyncPill("busy", "connecting...");
+
+  try{
+    await ghVerifyRepo();
+    const files = await ghListNotes();
+
+    saveSettingsToStorage();
+    state.connected = true;
+    updateGhStatusDot();
+
+    const githubNotes = files.map(f => ({
+      name: f.name,
+      path: f.path,
+      sha: f.sha,
+      title: f.name.replace(/\.md$/, ""),
+      titleLocked: false,
+      content: "",
+      loaded: false,
+      dirty: false,
+      source: "github",
+      updatedAt: Date.now(),
+    }));
+
+    // Merge: keep local-only unsaved notes, replace github-sourced ones with fresh list
+    const localOnly = state.notes.filter(n => n.source === "local");
+    state.notes = [...localOnly, ...githubNotes];
+
+    renderNoteList();
+    restoreSyncPillIdle();
+    showGhMsg(`Connected. Found ${githubNotes.length} note(s) in ${NOTES_DIR}/.`, false);
+    toast("Connected to GitHub");
+  }catch(err){
+    state.connected = false;
+    updateGhStatusDot();
+    setSyncPill("error", "connection failed");
+    showGhMsg(err.message, true);
+    toast(err.message, true);
+  }finally{
+    btn.disabled = false;
+    btnText.textContent = "Connect & sync";
+  }
+}
+
+function disconnectGitHub(){
+  clearSettingsStorage();
+  state.settings = {username:"", repo:"", branch:"main", token:""};
+  state.connected = false;
+  updateGhStatusDot();
+  $("#ghUsername").value = "";
+  $("#ghRepo").value = "";
+  $("#ghBranch").value = "";
+  $("#ghToken").value = "";
+  showGhMsg("Disconnected. Notes will save locally only.", false);
+  restoreSyncPillIdle();
+
+  // Drop unloaded github note stubs, keep anything already loaded as local copies
+  state.notes = state.notes.filter(n => n.source !== "github" || n.loaded);
+  state.notes.forEach(n => { if(n.source === "github"){ n.source = "local"; n.sha = null; n.dirty = true; } });
+  saveLocalNotesToStorage();
+  renderNoteList();
+  toast("GitHub disconnected");
+}
+
+async function autoConnectIfConfigured(){
+  if(!hasGitHubConfig()) return;
+  $("#ghUsername").value = state.settings.username;
+  $("#ghRepo").value = state.settings.repo;
+  $("#ghBranch").value = state.settings.branch || "main";
+  $("#ghToken").value = state.settings.token;
+
+  setSyncPill("busy", "connecting...");
+  try{
+    await ghVerifyRepo();
+    const files = await ghListNotes();
+    state.connected = true;
+    updateGhStatusDot();
+
+    const githubNotes = files.map(f => ({
+      name: f.name,
+      path: f.path,
+      sha: f.sha,
+      title: f.name.replace(/\.md$/, ""),
+      titleLocked: false,
+      content: "",
+      loaded: false,
+      dirty: false,
+      source: "github",
+      updatedAt: Date.now(),
+    }));
+    const localOnly = state.notes.filter(n => n.source === "local");
+    state.notes = [...localOnly, ...githubNotes];
+    renderNoteList();
+    restoreSyncPillIdle();
+  }catch(err){
+    state.connected = false;
+    updateGhStatusDot();
+    setSyncPill("error", "connection failed");
+    toast("GitHub auto-connect failed: " + err.message, true);
+  }
+}
+
+/* =========================================================
+   Sidebar toggle / GitHub panel toggle
+   ========================================================= */
+function applySidebarState(){
+  $("#sidebar").classList.toggle("collapsed", state.sidebarCollapsed);
+}
+
+function toggleSidebar(){
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  localStorage.setItem(LS_SIDEBAR, state.sidebarCollapsed ? "1" : "0");
+  applySidebarState();
+  setTimeout(() => { if(state.cm) state.cm.refresh(); }, 200);
+}
+
+function toggleGithubPanel(){
+  $("#githubPanel").classList.toggle("open");
+  $("#githubToggle").classList.toggle("open");
+}
+
+/* =========================================================
+   Wiring
+   ========================================================= */
+function wireEvents(){
+  $("#sidebarToggle").addEventListener("click", toggleSidebar);
+  $("#newNoteBtn").addEventListener("click", newNote);
+  $("#saveBtn").addEventListener("click", saveCurrentNote);
+  $("#githubToggle").addEventListener("click", toggleGithubPanel);
+  $("#ghConnectBtn").addEventListener("click", connectGitHub);
+  $("#ghDisconnectBtn").addEventListener("click", disconnectGitHub);
+  $("#searchInput").addEventListener("input", (e) => {
+    state.filter = e.target.value;
+    renderNoteList();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    if(mod && e.key.toLowerCase() === "s"){
+      e.preventDefault();
+      saveCurrentNote();
+    }
+  });
+
+  window.addEventListener("resize", () => { if(state.cm) state.cm.refresh(); });
+
+  window.addEventListener("beforeunload", (e) => {
+    const anyDirty = state.notes.some(n => n.dirty);
+    if(anyDirty){
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+}
+
+/* =========================================================
+   Boot
+   ========================================================= */
+async function boot(){
+  applySidebarState();
+  initEditor();
+  wireEvents();
+
+  state.notes = loadLocalNotes().map(n => ({
+    name: n.name,
+    path: `${NOTES_DIR}/${n.name}`,
+    sha: null,
+    title: n.title,
+    titleLocked: true,
+    content: n.content,
+    loaded: true,
+    dirty: true,
+    source: "local",
+    updatedAt: n.updatedAt || Date.now(),
+  }));
+
+  renderNoteList();
+  restoreSyncPillIdle();
+  updateGhStatusDot();
+
+  if(hasGitHubConfig()){
+    await autoConnectIfConfigured();
+  }
+}
+
+boot();
+
+})();
+</script>
+</body>
+</html>
