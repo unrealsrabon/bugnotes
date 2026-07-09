@@ -292,7 +292,7 @@ header{
   line-height:1.6;
 }
 
-/* ---------- Sidebar bottom: GitHub settings ---------- */
+/* ---------- Sidebar bottom: local backup panel ---------- */
 .sidebar-bottom{
   border-top:1px solid var(--border);
   padding: 10px;
@@ -594,11 +594,13 @@ header{
 
       <div class="sidebar-bottom">
         <button class="gh-toggle" id="githubToggle">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 .3a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58l-.01-2.03c-3.34.73-4.04-1.42-4.04-1.42-.55-1.38-1.34-1.75-1.34-1.75-1.09-.75.08-.73.08-.73 1.21.08 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.02 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.92.43.37.81 1.1.81 2.22l-.01 3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .3Z"/>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="8" ry="3"></ellipse>
+            <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5"></path>
+            <path d="M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"></path>
           </svg>
-          <span>GitHub sync</span>
-          <span class="gh-status-dot" id="ghStatusDot"></span>
+          <span>Local backup</span>
+          <span class="gh-status-dot on" id="ghStatusDot"></span>
           <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
@@ -606,39 +608,32 @@ header{
 
         <div id="githubPanel">
           <div class="gh-form">
-            <div class="field">
-              <label for="ghUsername">GitHub username</label>
-              <input type="text" id="ghUsername" placeholder="octocat" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="ghRepo">Repository</label>
-              <input type="text" id="ghRepo" placeholder="bugbounty-notes" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="ghBranch">Branch</label>
-              <input type="text" id="ghBranch" placeholder="main" autocomplete="off">
-            </div>
-            <div class="field">
-              <label for="ghToken">Personal access token</label>
-              <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
-              <div class="field-hint">Stored only in this browser's localStorage. Needs <code>repo</code> scope for private repos.</div>
+            <div class="field-hint">
+              Everything is stored locally in this browser's IndexedDB — nothing ever leaves your machine. Export a backup file now and then so you can restore your notebook if this browser's storage is ever cleared.
             </div>
 
             <div class="gh-msg" id="ghMsg"></div>
 
             <div class="gh-actions">
-              <button class="btn btn-primary" id="ghConnectBtn" style="flex:1;">
+              <button class="btn btn-primary btn-block" id="exportBackupBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 1 1-6.22-8.56"></path>
-                  <polyline points="21 3 21 9 15 9"></polyline>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7 10 12 15 17 10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                <span id="ghConnectBtnText">Connect &amp; sync</span>
+                <span>Export Backup (.json)</span>
               </button>
-              <button class="btn btn-ghost btn-sm" id="ghDisconnectBtn" title="Forget credentials">
+            </div>
+            <div class="gh-actions">
+              <button class="btn btn-block" id="importBackupBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M18 6 6 18"></path><path d="m6 6 12 12"></path>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
                 </svg>
+                <span>Import Backup</span>
               </button>
+              <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
             </div>
           </div>
         </div>
@@ -665,16 +660,14 @@ header{
 /* =========================================================
    Constants & small utilities
    ========================================================= */
-const NOTES_DIR = "notes";
-const LS_SETTINGS = "fieldnotes.gh.settings";
-const LS_LOCAL_NOTES = "fieldnotes.local.notes";
 const LS_SIDEBAR = "fieldnotes.sidebar.collapsed";
+const AUTOSAVE_DELAY = 400; // ms debounce before writing a change to IndexedDB
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
 function uid(){
-  return Math.random().toString(36).slice(2, 8);
+  return Math.random().toString(36).slice(2, 10);
 }
 
 function slugify(str){
@@ -685,16 +678,6 @@ function slugify(str){
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 48) || "untitled";
-}
-
-function b64EncodeUnicode(str){
-  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
-    (_, p1) => String.fromCharCode("0x" + p1)));
-}
-function b64DecodeUnicode(str){
-  return decodeURIComponent(atob(str).split("").map(
-    c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
-  ).join(""));
 }
 
 function extractTitle(content){
@@ -733,169 +716,110 @@ function toast(msg, isErr){
 }
 
 /* =========================================================
+   IndexedDB storage layer
+   All note data lives here — nothing ever leaves the browser.
+   ========================================================= */
+const DB_NAME = "fieldnotes-db";
+const DB_VERSION = 1;
+const STORE_NOTES = "notes";
+
+let dbPromise = null;
+
+function openDB(){
+  if(dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    if(!("indexedDB" in window)){
+      reject(new Error("IndexedDB is not available in this browser."));
+      return;
+    }
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains(STORE_NOTES)){
+        const store = db.createObjectStore(STORE_NOTES, {keyPath: "id"});
+        store.createIndex("updatedAt", "updatedAt", {unique: false});
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error("Failed to open local database."));
+  });
+  return dbPromise;
+}
+
+async function dbGetAllNotes(){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NOTES, "readonly");
+    const req = tx.objectStore(STORE_NOTES).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error || new Error("Failed to read notes."));
+  });
+}
+
+async function dbPutNote(record){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NOTES, "readwrite");
+    tx.objectStore(STORE_NOTES).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error("Failed to save note."));
+  });
+}
+
+async function dbDeleteNote(id){
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NOTES, "readwrite");
+    tx.objectStore(STORE_NOTES).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error("Failed to delete note."));
+  });
+}
+
+/* =========================================================
    State
    ========================================================= */
 const state = {
-  settings: loadSettings(),          // {username, repo, branch, token}
-  connected: false,
-  notes: [],                         // [{name, path, sha, title, content, loaded, dirty, source:'github'|'local', updatedAt}]
-  currentName: null,
-  cm: null,                          // CodeMirror instance
+  notes: [],                 // [{id, title, titleLocked, content, dirty, updatedAt}]
+  currentId: null,
+  cm: null,                  // CodeMirror instance
   suppressChange: false,
   sidebarCollapsed: localStorage.getItem(LS_SIDEBAR) === "1",
   filter: "",
-  busy: false,
+  saveTimers: Object.create(null), // id -> timeout handle, for debounced autosave
 };
 
-function loadSettings(){
-  try{
-    const raw = localStorage.getItem(LS_SETTINGS);
-    return raw ? JSON.parse(raw) : {username:"", repo:"", branch:"main", token:""};
-  }catch(e){
-    return {username:"", repo:"", branch:"main", token:""};
-  }
-}
-function saveSettingsToStorage(){
-  localStorage.setItem(LS_SETTINGS, JSON.stringify(state.settings));
-}
-function clearSettingsStorage(){
-  localStorage.removeItem(LS_SETTINGS);
+function toDbRecord(note){
+  return {
+    id: note.id,
+    title: note.title,
+    titleLocked: !!note.titleLocked,
+    content: note.content,
+    updatedAt: note.updatedAt,
+  };
 }
 
-function loadLocalNotes(){
-  try{
-    const raw = localStorage.getItem(LS_LOCAL_NOTES);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-function saveLocalNotesToStorage(){
-  const localOnly = state.notes.filter(n => n.source === "local");
-  localStorage.setItem(LS_LOCAL_NOTES, JSON.stringify(localOnly.map(n => ({
-    name:n.name, title:n.title, content:n.content, updatedAt:n.updatedAt
-  }))));
+function getCurrentNote(){
+  return state.notes.find(n => n.id === state.currentId) || null;
 }
 
-function hasGitHubConfig(){
-  const s = state.settings;
-  return !!(s.username && s.repo && s.token);
+/* Dynamic filename display — derived live from the note's current title
+   rather than a fixed value, so it always reflects what's being typed. */
+function displaySlugName(note){
+  if(!note) return null;
+  return `${slugify(note.title || "untitled")}.md`;
 }
 
 /* =========================================================
-   GitHub REST API layer  (untouched sync logic)
-   ========================================================= */
-function ghHeaders(){
-  return {
-    "Authorization": "token " + state.settings.token,
-    "Accept": "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2022-11-28",
-    "Content-Type": "application/json",
-  };
-}
-
-function ghBase(){
-  return `https://api.github.com/repos/${encodeURIComponent(state.settings.username)}/${encodeURIComponent(state.settings.repo)}`;
-}
-
-function branchParam(){
-  return state.settings.branch ? `?ref=${encodeURIComponent(state.settings.branch)}` : "";
-}
-
-async function ghListNotes(){
-  const url = `${ghBase()}/contents/${NOTES_DIR}${branchParam()}`;
-  const res = await fetch(url, {headers: ghHeaders()});
-  if(res.status === 404){
-    return []; // folder doesn't exist yet
-  }
-  if(!res.ok){
-    throw await ghError(res);
-  }
-  const data = await res.json();
-  if(!Array.isArray(data)) return [];
-  return data.filter(f => f.type === "file" && f.name.endsWith(".md"));
-}
-
-async function ghGetFile(path){
-  const url = `${ghBase()}/contents/${path}${branchParam()}`;
-  const res = await fetch(url, {headers: ghHeaders()});
-  if(!res.ok){
-    throw await ghError(res);
-  }
-  const data = await res.json();
-  return {
-    sha: data.sha,
-    content: b64DecodeUnicode(data.content.replace(/\n/g, "")),
-  };
-}
-
-async function ghPutFile(path, content, sha, message){
-  const url = `${ghBase()}/contents/${path}`;
-  const body = {
-    message: message || `Update ${path}`,
-    content: b64EncodeUnicode(content),
-  };
-  if(sha) body.sha = sha;
-  if(state.settings.branch) body.branch = state.settings.branch;
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: ghHeaders(),
-    body: JSON.stringify(body),
-  });
-  if(!res.ok){
-    throw await ghError(res);
-  }
-  const data = await res.json();
-  return data.content.sha;
-}
-
-async function ghDeleteFile(path, sha, message){
-  const url = `${ghBase()}/contents/${path}`;
-  const body = {
-    message: message || `Delete ${path}`,
-    sha: sha,
-  };
-  if(state.settings.branch) body.branch = state.settings.branch;
-  const res = await fetch(url, {
-    method: "DELETE",
-    headers: ghHeaders(),
-    body: JSON.stringify(body),
-  });
-  if(!res.ok){
-    throw await ghError(res);
-  }
-}
-
-async function ghVerifyRepo(){
-  const res = await fetch(ghBase(), {headers: ghHeaders()});
-  if(!res.ok){
-    throw await ghError(res);
-  }
-  return res.json();
-}
-
-async function ghError(res){
-  let detail = "";
-  try{
-    const j = await res.json();
-    detail = j.message || "";
-  }catch(e){}
-  if(res.status === 401) return new Error("Authentication failed — check your personal access token.");
-  if(res.status === 404) return new Error("Repository not found — check username/repo, or the token lacks access.");
-  if(res.status === 403) return new Error(detail || "Forbidden — token may be missing the repo scope, or rate limit hit.");
-  if(res.status === 409) return new Error("Conflict — the file changed upstream. Reload and try again.");
-  return new Error(detail || `GitHub API error (${res.status})`);
-}
-
-/* =========================================================
-   Sync status pill
+   Sync / status pill (now reflects local IndexedDB autosave state)
    ========================================================= */
 function setSyncPill(mode, text){
   const pill = $("#syncPill");
   pill.className = "sync-pill " + mode;
   $("#syncPillText").textContent = text;
 }
-
-function updateGhStatusDot(){
-  $("#ghStatusDot").classList.toggle("on", state.connected);
+function restoreSyncPillIdle(){
+  setSyncPill("online", "saved on device");
 }
 
 /* =========================================================
@@ -905,7 +829,10 @@ function visibleNotes(){
   const q = state.filter.trim().toLowerCase();
   const sorted = [...state.notes].sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
   if(!q) return sorted;
-  return sorted.filter(n => (n.title||"").toLowerCase().includes(q) || n.name.toLowerCase().includes(q));
+  return sorted.filter(n =>
+    (n.title||"").toLowerCase().includes(q) ||
+    displaySlugName(n).toLowerCase().includes(q)
+  );
 }
 
 function renderNoteList(){
@@ -917,7 +844,7 @@ function renderNoteList(){
     const empty = document.createElement("div");
     empty.className = "empty-list";
     empty.textContent = state.notes.length === 0
-      ? "No notes yet. Start a new one — it will save here and, if connected, sync to GitHub."
+      ? "No notes yet. Start a new one — it saves instantly to this browser's local database."
       : "No notes match your filter.";
     list.appendChild(empty);
     return;
@@ -925,11 +852,11 @@ function renderNoteList(){
 
   for(const note of notes){
     const item = document.createElement("div");
-    item.className = "note-item" + (note.name === state.currentName ? " active" : "");
-    item.dataset.name = note.name;
+    item.className = "note-item" + (note.id === state.currentId ? " active" : "");
+    item.dataset.id = note.id;
 
     const dot = document.createElement("span");
-    dot.className = "status-dot " + (note.source === "github" && !note.dirty ? "synced" : "local");
+    dot.className = "status-dot " + (note.dirty ? "local" : "synced");
 
     const meta = document.createElement("div");
     meta.className = "meta";
@@ -938,7 +865,7 @@ function renderNoteList(){
     title.textContent = note.title || "Untitled";
     const sub = document.createElement("div");
     sub.className = "sub";
-    sub.textContent = (note.dirty ? "unsaved · " : "") + fmtTime(note.updatedAt);
+    sub.textContent = (note.dirty ? "saving… · " : "") + fmtTime(note.updatedAt);
     meta.appendChild(title);
     meta.appendChild(sub);
 
@@ -948,13 +875,13 @@ function renderNoteList(){
     del.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`;
     del.addEventListener("click", (e) => {
       e.stopPropagation();
-      deleteNote(note.name);
+      deleteNote(note.id);
     });
 
     item.appendChild(dot);
     item.appendChild(meta);
     item.appendChild(del);
-    item.addEventListener("click", () => selectNote(note.name));
+    item.addEventListener("click", () => selectNote(note.id));
     list.appendChild(item);
   }
 }
@@ -1154,7 +1081,7 @@ function initEditor(){
         <line x1="9" y1="17" x2="13" y2="17"></line>
       </svg>
       <h2>No note open</h2>
-      <p>Select a note from the sidebar, or start a new one. Notes save locally and sync to your private GitHub repo when connected.</p>
+      <p>Select a note from the sidebar, or start a new one. Everything saves instantly to this browser's local database — nothing is sent anywhere.</p>
     </div>
   `;
 
@@ -1202,7 +1129,9 @@ function onEditorChange(){
     const ti = $("#titleInput");
     if(document.activeElement !== ti) ti.value = note.title === "Untitled" ? "" : note.title;
   }
+  note.updatedAt = Date.now();
   markDirty(note);
+  scheduleAutosave(note);
 }
 
 function onTitleInput(){
@@ -1211,32 +1140,43 @@ function onTitleInput(){
   const val = $("#titleInput").value;
   note.title = val.trim() ? val.trim() : "Untitled";
   note.titleLocked = true;
+  note.updatedAt = Date.now();
   markDirty(note);
-  renderNoteList();
-  updateHeader();
+  scheduleAutosave(note);
 }
 
 function markDirty(note){
   note.dirty = true;
-  note.updatedAt = Date.now();
-  saveLocalNotesToStorage();
   renderNoteList();
   updateHeader();
   updateFooterCounts();
 }
 
-function getCurrentNote(){
-  return state.notes.find(n => n.name === state.currentName) || null;
+/* Debounced autosave straight to IndexedDB. A short delay coalesces
+   fast keystrokes into a single write while still guaranteeing the
+   note is safely on disk well before a refresh could lose it. */
+function scheduleAutosave(note){
+  clearTimeout(state.saveTimers[note.id]);
+  setSyncPill("busy", "saving...");
+  state.saveTimers[note.id] = setTimeout(() => persistNote(note), AUTOSAVE_DELAY);
+}
+
+async function persistNote(note){
+  try{
+    await dbPutNote(toDbRecord(note));
+    note.dirty = false;
+    restoreSyncPillIdle();
+    renderNoteList();
+    updateHeader();
+  }catch(err){
+    setSyncPill("error", "save failed");
+    toast("Autosave failed: " + err.message, true);
+  }
 }
 
 /* Dynamic breadcrumb / filename display — derived live from the note's
    current title rather than a fixed value, so it always reflects what's
    being typed instead of staying stuck on the original filename. */
-function displaySlugName(note){
-  if(!note) return null;
-  return `${slugify(note.title || "untitled")}.md`;
-}
-
 function updateHeader(){
   const note = getCurrentNote();
   $("#headerNoteName").textContent = note ? displaySlugName(note) : "no note open";
@@ -1250,54 +1190,45 @@ function updateFooterCounts(){
   const text = note.content || "";
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   $("#footerCounts").textContent = `${words} words · ${text.length} chars`;
-  $("#footerFilename").textContent = `${NOTES_DIR}/${displaySlugName(note)}`;
+  $("#footerFilename").textContent = `notes/${displaySlugName(note)}`;
 }
 
 /* =========================================================
    Note actions
    ========================================================= */
-function newNote(){
-  const name = `untitled-${uid()}.md`;
+async function newNote(){
   const note = {
-    name,
-    path: `${NOTES_DIR}/${name}`,
-    sha: null,
+    id: uid(),
     title: "Untitled",
     titleLocked: false,
     content: "",
-    loaded: true,
     dirty: true,
-    source: "local",
     updatedAt: Date.now(),
   };
   state.notes.unshift(note);
-  saveLocalNotesToStorage();
   renderNoteList();
-  selectNote(name);
+  selectNote(note.id);
   $("#titleInput").focus();
+
+  // Persist immediately so the note survives a refresh even before any typing.
+  try{
+    setSyncPill("busy", "saving...");
+    await dbPutNote(toDbRecord(note));
+    note.dirty = false;
+    restoreSyncPillIdle();
+    renderNoteList();
+    updateHeader();
+  }catch(err){
+    setSyncPill("error", "save failed");
+    toast("Could not create note: " + err.message, true);
+  }
 }
 
-async function selectNote(name){
-  const note = state.notes.find(n => n.name === name);
+function selectNote(id){
+  const note = state.notes.find(n => n.id === id);
   if(!note) return;
 
-  if(!note.loaded && note.source === "github"){
-    try{
-      setSyncPill("busy", "loading...");
-      const file = await ghGetFile(note.path);
-      note.content = file.content;
-      note.sha = file.sha;
-      note.title = extractTitle(file.content);
-      note.loaded = true;
-      restoreSyncPillIdle();
-    }catch(err){
-      restoreSyncPillIdle();
-      toast(err.message, true);
-      return;
-    }
-  }
-
-  state.currentName = name;
+  state.currentId = id;
   state.suppressChange = true;
   state.cm.setValue(note.content || "");
   state.cm.clearHistory();
@@ -1321,81 +1252,43 @@ async function saveCurrentNote(){
   note.content = state.cm.getValue();
   const titleVal = $("#titleInput").value.trim();
   note.title = titleVal || extractTitle(note.content) || "Untitled";
-  const desiredName = slugify(note.title || "untitled") + ".md";
-  const desiredPath = NOTES_DIR + "/" + desiredName;
-  const previousName = note.name;
-  const previousPath = note.path;
-  const previousSha = note.sha;
+  note.updatedAt = Date.now();
 
-  note.name = desiredName;
-  note.path = desiredPath;
-
-  if(state.currentName === previousName){
-    state.currentName = desiredName;
-  }
-
-  if(!hasGitHubConfig()){
-    note.dirty = false;
-    note.source = "local";
-    note.updatedAt = Date.now();
-    saveLocalNotesToStorage();
-    renderNoteList();
-    updateHeader();
-    toast("Saved locally. Connect GitHub to sync.");
-    return;
-  }
+  clearTimeout(state.saveTimers[note.id]);
 
   try{
     setSyncPill("busy", "saving...");
-    let sha;
-    if(previousPath !== desiredPath){
-      if(previousSha){
-        sha = await ghPutFile(desiredPath, note.content, null, `Rename ${previousName} to ${desiredName}`);
-        await ghDeleteFile(previousPath, previousSha, `Delete old path ${previousName}`);
-      }else{
-        sha = await ghPutFile(desiredPath, note.content, null, `Add ${desiredName}`);
-      }
-    }else{
-      sha = await ghPutFile(note.path, note.content, note.sha, `${note.sha ? "Update" : "Add"} ${note.name}`);
-    }
-    note.sha = sha;
+    await dbPutNote(toDbRecord(note));
     note.dirty = false;
-    note.source = "github";
-    note.updatedAt = Date.now();
-    saveLocalNotesToStorage();
     renderNoteList();
     updateHeader();
     restoreSyncPillIdle();
-    toast(`Saved to GitHub — ${note.name}`);
+    toast("Saved locally.");
   }catch(err){
     setSyncPill("error", "save failed");
-    toast(err.message, true);
+    toast("Save failed: " + err.message, true);
   }
 }
 
-async function deleteNote(name){
-  const note = state.notes.find(n => n.name === name);
+async function deleteNote(id){
+  const note = state.notes.find(n => n.id === id);
   if(!note) return;
-  const ok = confirm(`Delete "${note.title || note.name}"? This cannot be undone.`);
+  const ok = confirm(`Delete "${note.title || "Untitled"}"? This cannot be undone.`);
   if(!ok) return;
 
-  if(note.source === "github" && note.sha && hasGitHubConfig()){
-    try{
-      setSyncPill("busy", "deleting...");
-      await ghDeleteFile(note.path, note.sha, `Delete ${note.name}`);
-      restoreSyncPillIdle();
-    }catch(err){
-      restoreSyncPillIdle();
-      toast(err.message, true);
-      return;
-    }
+  clearTimeout(state.saveTimers[id]);
+
+  try{
+    await dbDeleteNote(id);
+  }catch(err){
+    toast("Delete failed: " + err.message, true);
+    return;
   }
 
-  state.notes = state.notes.filter(n => n.name !== name);
-  saveLocalNotesToStorage();
+  state.notes = state.notes.filter(n => n.id !== id);
 
-  if(state.currentName === name){
-    state.currentName = null;
+  if(state.currentId === id){
+    state.currentId = null;
     $("#editorShell").style.display = "none";
     $("#editorFooter").style.display = "none";
     $("#emptyState").style.display = "flex";
@@ -1406,142 +1299,100 @@ async function deleteNote(name){
 }
 
 /* =========================================================
-   GitHub connect / sync flow  (untouched)
+   Local backup: export / import (.json)
    ========================================================= */
-function restoreSyncPillIdle(){
-  if(state.connected){
-    setSyncPill("online", `${state.settings.username}/${state.settings.repo}`);
-  }else{
-    setSyncPill("offline", "local only");
-  }
-}
-
-function showGhMsg(msg, isErr){
+function showBackupMsg(msg, isErr){
   const el = $("#ghMsg");
   el.textContent = msg;
   el.className = "gh-msg show " + (isErr ? "err" : "ok");
 }
 
-async function connectGitHub(){
-  const username = $("#ghUsername").value.trim();
-  const repo = $("#ghRepo").value.trim();
-  const branch = $("#ghBranch").value.trim() || "main";
-  const token = $("#ghToken").value.trim();
-
-  if(!username || !repo || !token){
-    showGhMsg("Username, repository, and token are required.", true);
+function exportBackup(){
+  if(state.notes.length === 0){
+    toast("No notes to export yet");
     return;
   }
-
-  state.settings = {username, repo, branch, token};
-
-  const btn = $("#ghConnectBtn");
-  const btnText = $("#ghConnectBtnText");
-  btn.disabled = true;
-  btnText.textContent = "Connecting...";
-  setSyncPill("busy", "connecting...");
-
-  try{
-    await ghVerifyRepo();
-    const files = await ghListNotes();
-
-    saveSettingsToStorage();
-    state.connected = true;
-    updateGhStatusDot();
-
-    const githubNotes = files.map(f => ({
-      name: f.name,
-      path: f.path,
-      sha: f.sha,
-      title: f.name.replace(/\.md$/, ""),
-      titleLocked: false,
-      content: "",
-      loaded: false,
-      dirty: false,
-      source: "github",
-      updatedAt: Date.now(),
-    }));
-
-    // Merge: keep local-only unsaved notes, replace github-sourced ones with fresh list
-    const localOnly = state.notes.filter(n => n.source === "local");
-    state.notes = [...localOnly, ...githubNotes];
-
-    renderNoteList();
-    restoreSyncPillIdle();
-    showGhMsg(`Connected. Found ${githubNotes.length} note(s) in ${NOTES_DIR}/.`, false);
-    toast("Connected to GitHub");
-  }catch(err){
-    state.connected = false;
-    updateGhStatusDot();
-    setSyncPill("error", "connection failed");
-    showGhMsg(err.message, true);
-    toast(err.message, true);
-  }finally{
-    btn.disabled = false;
-    btnText.textContent = "Connect & sync";
-  }
+  const payload = {
+    app: "fieldnotes",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    notes: state.notes.map(n => ({
+      id: n.id,
+      title: n.title,
+      titleLocked: !!n.titleLocked,
+      content: n.content,
+      updatedAt: n.updatedAt,
+    })),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
+  const url = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `fieldnotes-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showBackupMsg(`Exported ${state.notes.length} note(s).`, false);
+  toast(`Exported ${state.notes.length} note(s)`);
 }
 
-function disconnectGitHub(){
-  clearSettingsStorage();
-  state.settings = {username:"", repo:"", branch:"main", token:""};
-  state.connected = false;
-  updateGhStatusDot();
-  $("#ghUsername").value = "";
-  $("#ghRepo").value = "";
-  $("#ghBranch").value = "";
-  $("#ghToken").value = "";
-  showGhMsg("Disconnected. Notes will save locally only.", false);
-  restoreSyncPillIdle();
-
-  // Drop unloaded github note stubs, keep anything already loaded as local copies
-  state.notes = state.notes.filter(n => n.source !== "github" || n.loaded);
-  state.notes.forEach(n => { if(n.source === "github"){ n.source = "local"; n.sha = null; n.dirty = true; } });
-  saveLocalNotesToStorage();
-  renderNoteList();
-  toast("GitHub disconnected");
+function triggerImport(){
+  $("#importFileInput").click();
 }
 
-async function autoConnectIfConfigured(){
-  if(!hasGitHubConfig()) return;
-  $("#ghUsername").value = state.settings.username;
-  $("#ghRepo").value = state.settings.repo;
-  $("#ghBranch").value = state.settings.branch || "main";
-  $("#ghToken").value = state.settings.token;
+async function handleImportFile(e){
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ""; // allow re-selecting the same file later
+  if(!file) return;
 
-  setSyncPill("busy", "connecting...");
   try{
-    await ghVerifyRepo();
-    const files = await ghListNotes();
-    state.connected = true;
-    updateGhStatusDot();
+    const text = await file.text();
+    const data = JSON.parse(text);
+    const incoming = Array.isArray(data) ? data
+      : (data && Array.isArray(data.notes)) ? data.notes
+      : null;
 
-    const githubNotes = files.map(f => ({
-      name: f.name,
-      path: f.path,
-      sha: f.sha,
-      title: f.name.replace(/\.md$/, ""),
-      titleLocked: false,
-      content: "",
-      loaded: false,
-      dirty: false,
-      source: "github",
-      updatedAt: Date.now(),
-    }));
-    const localOnly = state.notes.filter(n => n.source === "local");
-    state.notes = [...localOnly, ...githubNotes];
+    if(!incoming){
+      throw new Error("That file doesn't look like a FieldNotes backup.");
+    }
+
+    const existingIds = new Set(state.notes.map(n => n.id));
+    let imported = 0;
+
+    for(const raw of incoming){
+      if(!raw || typeof raw.content !== "string") continue;
+
+      let id = (typeof raw.id === "string" && raw.id && !existingIds.has(raw.id)) ? raw.id : uid();
+      while(existingIds.has(id)) id = uid();
+      existingIds.add(id);
+
+      const note = {
+        id,
+        title: (raw.title && String(raw.title).trim()) || extractTitle(raw.content) || "Untitled",
+        titleLocked: !!raw.titleLocked,
+        content: raw.content,
+        dirty: false,
+        updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : Date.now(),
+      };
+
+      await dbPutNote(toDbRecord(note));
+      state.notes.unshift(note);
+      imported++;
+    }
+
     renderNoteList();
-    restoreSyncPillIdle();
+    showBackupMsg(`Imported ${imported} note(s).`, false);
+    toast(`Imported ${imported} note(s)`);
   }catch(err){
-    state.connected = false;
-    updateGhStatusDot();
-    setSyncPill("error", "connection failed");
-    toast("GitHub auto-connect failed: " + err.message, true);
+    showBackupMsg(err.message, true);
+    toast("Import failed: " + err.message, true);
   }
 }
 
 /* =========================================================
-   Sidebar toggle / GitHub panel toggle
+   Sidebar toggle / backup panel toggle
    ========================================================= */
 function applySidebarState(){
   $("#sidebar").classList.toggle("collapsed", state.sidebarCollapsed);
@@ -1554,7 +1405,7 @@ function toggleSidebar(){
   setTimeout(() => { if(state.cm) state.cm.refresh(); }, 200);
 }
 
-function toggleGithubPanel(){
+function toggleBackupPanel(){
   $("#githubPanel").classList.toggle("open");
   $("#githubToggle").classList.toggle("open");
 }
@@ -1566,9 +1417,10 @@ function wireEvents(){
   $("#sidebarToggle").addEventListener("click", toggleSidebar);
   $("#newNoteBtn").addEventListener("click", newNote);
   $("#saveBtn").addEventListener("click", saveCurrentNote);
-  $("#githubToggle").addEventListener("click", toggleGithubPanel);
-  $("#ghConnectBtn").addEventListener("click", connectGitHub);
-  $("#ghDisconnectBtn").addEventListener("click", disconnectGitHub);
+  $("#githubToggle").addEventListener("click", toggleBackupPanel);
+  $("#exportBackupBtn").addEventListener("click", exportBackup);
+  $("#importBackupBtn").addEventListener("click", triggerImport);
+  $("#importFileInput").addEventListener("change", handleImportFile);
   $("#searchInput").addEventListener("input", (e) => {
     state.filter = e.target.value;
     renderNoteList();
@@ -1594,33 +1446,31 @@ function wireEvents(){
 }
 
 /* =========================================================
-   Boot
+   Boot — load everything from IndexedDB and render immediately
    ========================================================= */
 async function boot(){
   applySidebarState();
   initEditor();
   wireEvents();
 
-  state.notes = loadLocalNotes().map(n => ({
-    name: n.name,
-    path: `${NOTES_DIR}/${n.name}`,
-    sha: null,
-    title: n.title,
-    titleLocked: true,
-    content: n.content,
-    loaded: true,
-    dirty: true,
-    source: "local",
-    updatedAt: n.updatedAt || Date.now(),
-  }));
+  setSyncPill("busy", "loading...");
+  try{
+    const stored = await dbGetAllNotes();
+    state.notes = stored.map(n => ({
+      id: n.id,
+      title: n.title || "Untitled",
+      titleLocked: !!n.titleLocked,
+      content: n.content || "",
+      dirty: false,
+      updatedAt: n.updatedAt || Date.now(),
+    }));
+    restoreSyncPillIdle();
+  }catch(err){
+    setSyncPill("error", "db unavailable");
+    toast("Could not open local database: " + err.message, true);
+  }
 
   renderNoteList();
-  restoreSyncPillIdle();
-  updateGhStatusDot();
-
-  if(hasGitHubConfig()){
-    await autoConnectIfConfigured();
-  }
 }
 
 boot();
