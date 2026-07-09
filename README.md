@@ -1,155 +1,138 @@
-# BugNotes
+# 🐛 BugNotes
 
-<p align="center">
-  <img alt="BugNotes logo" src="https://img.shields.io/badge/BugNotes-field%20notes%20for%20bug%20hunters-2f6b52?style=for-the-badge&logo=github&logoColor=white" />
-</p>
+### *The Premium, Distraction-Free Workspace for Bug Bounty Hunters & Security Researchers*
 
-<p align="center">
-  <a href="https://unrealsrabon.github.io/bugnotes">Live demo</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#github-sync">GitHub sync</a> ·
-  <a href="#setup">Setup</a>
-</p>
+[![Local-First](https://img.shields.io/badge/Architecture-100%25%20Local--First-eb5e28?style=flat-square)](#)
+[![Security](https://img.shields.io/badge/Security-Zero--Knowledge%20Sandbox-2ec4b6?style=flat-square)](#)
+[![Storage](https://img.shields.io/badge/Storage-IndexedDB%20Engine-0077b6?style=flat-square)](#)
+[![Design](https://img.shields.io/badge/UI-Claude--Inspired%20Minimalism-f4f3ee?style=flat-square&labelColor=252422)](#)
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center" width="33%">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M4 6h16M4 12h10M4 18h16" stroke="#3f6b52" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <br />
-        Recon-first notes
-      </td>
-      <td align="center" width="33%">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M12 3v18M3 12h18" stroke="#a97c2f" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <br />
-        Fast capture workflow
-      </td>
-      <td align="center" width="33%">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M7 12l3 3 7-7" stroke="#a8493c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <br />
-        Local and GitHub sync
-      </td>
-    </tr>
-  </table>
-</div>
+---
 
-## Overview
+## 1. Product Identity & Core Philosophy
 
-BugNotes is a browser-based markdown notebook built for bug hunters, security researchers, and anyone who needs to move quickly from recon to findings without losing context. It gives you a focused workspace for writing notes, tracking endpoints, recording payloads, and keeping evidence in one place. The app runs entirely in the browser and can optionally sync notes to a private GitHub repository.
+**BugNotes** is an ultra-minimalist, distraction-free Markdown scratchpad and note-taking workspace purpose-built for **security researchers, bug bounty hunters, and ethical hackers**. 
 
-The project is deployed here:
+When you are deep in an overnight target recon session, tracing a complex exploit chain, or logging volatile zero-day payloads, the last thing you should worry about is your note-taking tool. BugNotes strips away the clutter, tracking, and latency of traditional cloud-based applications, replacing them with a fluid, high-performance canvas that operates entirely inside your browser's native sandbox.
 
-- Live site: [unrealsrabon.github.io/bugnotes](https://unrealsrabon.github.io/bugnotes)
+### The Problem We Solve
+Traditional note-taking applications present severe liabilities for security professionals:
 
-## What It Is For
+| **Traditional Note Apps** | **The Security Risk** | **The BugNotes Mitigation** |
+| :--- | :--- | :--- |
+| **Public Cloud Sync** | Accidental leaks of sensitive targets, private scopes, or zero-days. | **100% Local-First Architecture.** Data never leaves your machine. |
+| **Server Logs / APIs** | Third-party tracking or interception of critical exploit code. | **Zero Centralized Endpoints.** Completely decoupled from external backends. |
+| **Clunky Configurations** | Wasting hours setting up databases, self-hosted Docker containers, or sync keys. | **Zero-Setup.** Open the URL and immediately start hacking. |
 
-Bug hunting work is messy by nature. You collect URLs, requests, parameters, screenshots, payloads, and small observations that later become a report. BugNotes is designed to keep that flow lightweight:
+---
 
-- Capture findings while you are still in recon mode.
-- Keep notes in markdown so they stay portable and easy to read.
-- Search quickly when you need to find a host, endpoint, or payload.
-- Sync to GitHub when you want durable storage and an audit trail.
+## 2. Architecture & Zero-Knowledge Security
 
-## Features
+BugNotes eliminates the attack surface by discarding the backend entirely. It operates with a **Zero-Knowledge Architecture** driven by a native client-side storage engine.
 
-### Note workspace
-
-- Markdown editor with line numbers, wrapping, active line highlighting, and a clean writing surface.
-- Note titles are derived from the content or the title field, then converted into slug-style markdown filenames.
-- One-click note creation, deletion, and selection from a sidebar list.
-- Unsaved changes are clearly marked in the UI.
-- Keyboard save support with `Ctrl/Cmd + S`.
-
-### Storage and persistence
-
-- Notes save locally in the browser using `localStorage`.
-- Local-only notes remain available after refresh.
-- Unload protection warns you if you are about to leave with unsaved work.
-
-### GitHub sync
-
-- Connect to a private or public GitHub repository through the GitHub REST API.
-- Sync notes stored under a `notes/` folder in the repo.
-- Load existing note files from GitHub and merge them with local-only notes.
-- Create, update, rename, and delete note files through GitHub once connected.
-- Sync status is shown directly in the header so you always know whether you are local-only or online.
-
-### Interface details
-
-- Collapsible sidebar for a tighter focus mode.
-- Dedicated GitHub connection panel with username, repository, branch, and token fields.
-- Inline status messages for connection, save, delete, and sync events.
-- SVG icon-based buttons throughout the interface.
-
-## How It Works
-
-BugNotes keeps a simple mental model:
-
-1. A note exists as a markdown file name plus content.
-2. If GitHub sync is not configured, the note lives locally in the browser.
-3. If GitHub sync is configured, the app reads and writes the note inside the configured repository.
-4. The sidebar is the source of truth for navigating between notes.
-
-This makes the app easy to use during active research, where you want fewer screens and less ceremony.
-
-## GitHub Sync
-
-To enable syncing, provide:
-
-- GitHub username
-- Repository name
-- Branch name, usually `main`
-- Personal access token
-
-Notes are stored in the browser only for this session and are not sent anywhere else unless you connect GitHub. The token is stored in `localStorage` inside your browser so the app can reconnect automatically later.
-
-### Required token access
-
-- For private repositories, the token needs `repo` scope.
-- For public repositories, use a token that can read and write contents as needed.
-
-### GitHub folder structure
-
-BugNotes expects note files in:
-
-```text
-notes/*.md
+```
+                   +---------------------------------------+
+                   |           User Browser Sandbox         |
+                   |                                       |
+                   |   [ BugNotes UI Canvas (Warm Cream) ] |
+                   |                    |                  |
+                   |                    v                  |
+                   |   [ CodeMirror 6 Markdown Engine ]   |
+                   |                    |                  |
+                   |                    v                  |
+                   |   [ Asynchronous Transactional ]      |
+                   +--------------------+------------------+
+                                        |
+                                        v (Direct Local Write)
+                   +---------------------------------------+
+                   |     IndexedDB Native Hard Drive       |
+                   |      (Refresh-Proof Persistence)      |
+                   +---------------------------------------+
 ```
 
-If the folder does not exist yet, the app will create files there when you save.
+### 🔒 100% Local-First
+There are no backend database connection strings, centralized servers, or API endpoints. BugNotes is entirely decoupled from Firebase, Supabase, GitHub REST APIs, and AWS. Your markdown text, raw HTTP logs, and private scope configurations stay inside your local environment.
 
-## Recommended Workflow
+### 🛡️ Browser Sandbox Storage
+Powered entirely by **IndexedDB**—a high-capacity, transactional, object-oriented database embedded natively inside your browser sandbox. The application writes directly to your local hard drive, enabling massive storage limits far exceeding standard `localStorage` restrictions.
 
-1. Create a new note while you are collecting scope and targets.
-2. Use the editor to document requests, parameters, interesting responses, and proof.
-3. Save early and often with `Ctrl/Cmd + S`.
-4. Rename the note by changing the title content and saving again.
-5. Connect GitHub when you want the notes mirrored to a repo.
-6. Keep your findings organized by target, endpoint, or issue type.
+### 🚫 Anti-Flooding & DoS Protection
+Because there is no centralized database server or shared network state, malicious actors cannot run automated scripts to inspect, flood, or trigger Denial of Service (DoS) attacks against your project data. Your infrastructure is as secure as your operating system.
 
+---
 
-## Browser Behavior
+## 3. Asynchronous Refresh-Proof Persistence
 
-- Notes, settings, and sidebar state are remembered in `localStorage`.
-- The editor uses CodeMirror for the markdown writing experience.
-- Markdown preview is handled in the app shell through the existing editor workflow.
-- The app warns before closing a tab if there are unsaved changes.
+Older local-first architectures often relied on brittle API states or slow sequential parsing, causing UI race conditions. BugNotes completely re-engineers this pipeline.
 
-## Best Fit Use Cases
+* **Instant Auto-Loading:** When the page is refreshed, hard-reloaded, or reopened in a new browser tab, the application asynchronously queries the local IndexedDB instance. It fully reconstructs and renders the entire note index hierarchy in the sidebar within milliseconds—with zero duplication or UI lag.
+* **State Machine Bug Eradication:** Shifting away from the legacy GitHub API state machine over to native IndexedDB completely eliminates exhausting race conditions, file duplicate clutter, and critical `"sha" wasn't supplied` commit hash errors during real-time note updates or header renames.
 
-- Bug bounty recon notes
-- Vulnerability writeups
-- Target scope tracking
-- Payload experimentation
-- Request/response observations
-- Report drafting
+---
 
-## Short Version
+## 4. Anti-Data-Loss Shield (Client-Side Backups)
 
-BugNotes is a focused, browser-first markdown notebook for bug hunters. It keeps recon notes, findings, and GitHub sync in one place, with a fast interface that stays out of the way while you work.
+Security testing environments often demand aggressive hygiene—including frequent browser history wipes, cookie purges, and automated site cache clearances. Under standard conditions, this risks destroying local browser databases. BugNotes builds a permanent physical defense against this vector.
+
+### 📦 Export Backup (`.json`)
+With a single click or shortcut, the application compiles your complete notebook state into a unified, lightweight offline payload:
+* Unique record IDs (`UUIDv4`)
+* Precise epoch time-metadata (`createdAt`, `updatedAt`)
+* Raw Markdown content strings and directory schemas
+
+### 📥 Import Backup
+Dropped your site cache? Switched to a clean, hardened burner laptop? Simply drag and drop your `.json` offline backup file back into a fresh BugNotes browser window. The system instantly parses the structure, fully restoring your exact workspace layout, notes, and hierarchical history in milliseconds.
+
+---
+
+## 5. Premium UI Canvas & Code-Editor Features
+
+The visual design is meticulously structured around prolonged, high-cognitive work sessions where eye strain and interface friction must be minimized.
+
+```
++-----------------------------------------------------------------+
+| 📂 My-Targets > src > exploit.md                       [ ][-]   |
++-----------------------------------------------------------------+
+|  1 | # Zero-Day Payload POC                                    |
+|  2 |                                                            |
+|  3 | Let's trace the memory corruption vulnerability here:     |
+|  4 |                                                            |
+|  5 | ```http                                                   |
+|  6 | POST /vulnerable-endpoint HTTP/1.1                        |
+|  7 | Host: target.internal                                     |
+|  8 | Content-Length: 42                                        |
+|  9 |                                                           |
+| 10 | AAAAAAAA...AAA                                            |
+| 11 | ```                                                       |
+|    |                                                           |
++-----------------------------------------------------------------+
+```
+
+### ☕ Claude-Inspired Aesthetics
+Designed with a calming, eye-friendly, anti-glare warm cream and dark charcoal color palette (`#f4f3ee`). Optimized specifically for grueling overnight target recon sessions, replacing harsh high-contrast blacks and blinding whites with organic, readable tones.
+
+### 🔲 Collapsible Workspace Focus
+Featuring a borderless UI toggle that instantly hides the navigational sidebars and index panels. This transforms the editor into a fluid, edge-to-edge focal canvas, isolating your code and notes from all external visual noise.
+
+### 🚀 CodeMirror 6 Engine
+Integrated with an elite, industrial-grade code-editor engine that drives:
+* **Live Inline Parsing:** Clean, real-time rendering of markdown syntax, headers, and codeblocks.
+* **Vertical Line Numbering:** Standard code gutters to maintain direct layout reference lines when pasting massive HTTP request/response payloads.
+* **Horizontal Cursor Line-Shadows:** Active highlight tracking to keep your place instantly visible in dense text documents.
+
+### 🗺️ Dynamic Path Tracking
+Features real-time state listeners where updating an active heading or title instantly modifies the top-left breadcrumb trail dynamically. Your location in complex multi-folder target structures remains crystal clear at all times.
+
+---
+
+## 6. Getting Started
+
+Since BugNotes requires **absolute zero-setup out of the box**, you can spin up your workspace in seconds:
+
+1. **Launch:** Access the live deployment link in any modern, sandboxed browser.
+2. **Hack:** Immediately start dropping private scopes, raw logs, or scripts.
+3. **Backup:** Download an offline `.json` backup before clearing your environment caches.
+
+---
+
+*Built for hackers, by hackers. Keep your notes local. Keep your data safe.*
