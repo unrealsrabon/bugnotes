@@ -65,14 +65,17 @@ Because there is no centralized database server or shared network state, malicio
 
 Security testing environments often demand aggressive hygiene—including frequent browser history wipes, cookie purges, and automated site cache clearances. Under standard conditions, this risks destroying local browser databases. BugNotes builds a permanent physical defense against this vector.
 
-### 📦 Export Backup (`.json`)
-With a single click or shortcut, the application compiles your complete notebook state into a unified, lightweight offline payload:
-* Unique record IDs (`UUIDv4`)
-* Precise epoch time-metadata (`createdAt`, `updatedAt`)
-* Raw Markdown content strings and directory schemas
+### 📤 Single-Note Markdown Export (`.md`)
+Download only the current active note you are working on with a single click:
+* Saves directly as a clean Markdown (`.md`) file onto your computer.
+* Uses the note's active title automatically as the filename.
+* Works completely offline using a fast, native browser Blob stream.
 
-### 📥 Import Backup
-Dropped your site cache? Switched to a clean, hardened burner laptop? Simply drag and drop your `.json` offline backup file back into a fresh BugNotes browser window. The system instantly parses the structure, fully restoring your exact workspace layout, notes, and hierarchical history in milliseconds.
+### 📥 Local File Import System
+Easily load any external Markdown document into your workspace using the sidebar button:
+* Select any `.md` file directly from your local drive.
+* Automatically creates a fresh note, sets the filename as the title, and loads the content instantly.
+* Zero network trackers—the file is read purely offline inside your browser for total data privacy.
 
 ---
 
